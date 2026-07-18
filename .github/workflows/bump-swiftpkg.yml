@@ -1,4 +1,4 @@
-name: Bump swiftpkg formula
+name: Bump swiftpkg formula and cask
 
 on:
   repository_dispatch:
@@ -13,32 +13,66 @@ jobs:
     runs-on: macos-15
     env:
       VERSION: ${{ github.event.client_payload.version }}
-      URL: ${{ github.event.client_payload.url }}
-      SHA256: ${{ github.event.client_payload.sha256 }}
+      CLI_URL: ${{ github.event.client_payload.cli_url }}
+      CLI_SHA256: ${{ github.event.client_payload.cli_sha256 }}
+      APP_URL: ${{ github.event.client_payload.app_url }}
+      APP_SHA256: ${{ github.event.client_payload.app_sha256 }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: Render formula
-        run: ruby scripts/render-formula.rb "$VERSION" "$URL" "$SHA256" Formula/swiftpkg.rb
+      - name: Test package renderer
+        run: ruby test/render-packages-test.rb
 
-      - name: Audit formula
-        run: brew audit --strict --formula Formula/swiftpkg.rb
+      - name: Render formula and cask
+        run: |
+          ruby scripts/render-packages.rb \
+            "$VERSION" \
+            "$CLI_URL" \
+            "$CLI_SHA256" \
+            "$APP_URL" \
+            "$APP_SHA256" \
+            Formula/swiftpkg.rb \
+            Casks/swiftpkgr.rb
 
-      - name: Install formula
-        run: brew install --build-from-source --formula Formula/swiftpkg.rb
+      - name: Register checkout as Homebrew tap
+        run: |
+          TAP_DIRECTORY="$(brew --repository)/Library/Taps/codecarton/homebrew-tap"
+          mkdir -p "$(dirname "$TAP_DIRECTORY")"
+          ln -s "$GITHUB_WORKSPACE" "$TAP_DIRECTORY"
 
-      - name: Test formula
-        run: brew test swiftpkg
+      - name: Audit formula and cask
+        run: |
+          brew audit --strict --formula codecarton/tap/swiftpkg
+          brew audit --strict --cask codecarton/tap/swiftpkgr
 
-      - name: Open formula update pull request
+      - name: Install and test formula
+        run: |
+          brew install --build-from-source codecarton/tap/swiftpkg
+          brew test codecarton/tap/swiftpkg
+
+      - name: Install and verify cask
+        run: |
+          brew install --cask codecarton/tap/swiftpkgr
+          test -d /Applications/Swiftpkgr.app
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /Applications/Swiftpkgr.app/Contents/Info.plist)" = "$VERSION"
+          codesign --verify --deep --strict --verbose=2 /Applications/Swiftpkgr.app
+          spctl --assess --type execute --verbose=4 /Applications/Swiftpkgr.app
+
+      - name: Remove test installations
+        if: always()
+        run: |
+          brew uninstall --cask swiftpkgr || true
+          brew uninstall swiftpkg || true
+
+      - name: Open formula and cask update pull request
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.TAP_PR_TOKEN || github.token }}
           commit-message: "swiftpkg ${{ env.VERSION }}"
           title: "swiftpkg ${{ env.VERSION }}"
           body: |
-            Automated formula update for signed swiftpkg release v${{ env.VERSION }}.
+            Automated formula and cask update for signed swiftpkg release v${{ env.VERSION }}.
 
-            The workflow audited, installed, and tested the formula before opening this pull request.
+            The workflow audited, installed, and verified both packages before opening this pull request.
           branch: automation/swiftpkg-${{ env.VERSION }}
           delete-branch: true
