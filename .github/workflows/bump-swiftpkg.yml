@@ -1,0 +1,44 @@
+name: Bump swiftpkg formula
+
+on:
+  repository_dispatch:
+    types: [swiftpkg-release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-swiftpkg:
+    runs-on: macos-15
+    env:
+      VERSION: ${{ github.event.client_payload.version }}
+      URL: ${{ github.event.client_payload.url }}
+      SHA256: ${{ github.event.client_payload.sha256 }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Render formula
+        run: ruby scripts/render-formula.rb "$VERSION" "$URL" "$SHA256" Formula/swiftpkg.rb
+
+      - name: Audit formula
+        run: brew audit --strict --formula Formula/swiftpkg.rb
+
+      - name: Install formula
+        run: brew install --build-from-source --formula Formula/swiftpkg.rb
+
+      - name: Test formula
+        run: brew test swiftpkg
+
+      - name: Open formula update pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.TAP_PR_TOKEN || github.token }}
+          commit-message: "swiftpkg ${{ env.VERSION }}"
+          title: "swiftpkg ${{ env.VERSION }}"
+          body: |
+            Automated formula update for signed swiftpkg release v${{ env.VERSION }}.
+
+            The workflow audited, installed, and tested the formula before opening this pull request.
+          branch: automation/swiftpkg-${{ env.VERSION }}
+          delete-branch: true
