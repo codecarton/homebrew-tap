@@ -68,6 +68,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.TAP_PR_TOKEN || github.token }}
+          branch-token: ${{ github.token }}
           commit-message: "swiftpkg ${{ env.VERSION }}"
           title: "swiftpkg ${{ env.VERSION }}"
           body: |
