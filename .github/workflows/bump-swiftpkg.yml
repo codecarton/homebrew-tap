@@ -67,7 +67,7 @@ jobs:
       - name: Open formula and cask update pull request
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.TAP_PR_TOKEN || github.token }}
+          token: ${{ github.token }}
           branch-token: ${{ github.token }}
           commit-message: "swiftpkg ${{ env.VERSION }}"
           title: "swiftpkg ${{ env.VERSION }}"
