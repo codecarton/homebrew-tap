@@ -1,8 +1,8 @@
 class Swiftpkg < Formula
   desc "Build macOS installer packages from project directories"
   homepage "https://github.com/codecarton/swiftpkg"
-  url "https://github.com/codecarton/swiftpkg/releases/download/v0.4.0/swiftpkg-0.4.0-universal.tar.gz"
-  sha256 "150782d3e2841619f19b58d6969e30c2b217250c451e8eaa7c3790104154b82e"
+  url "https://github.com/codecarton/swiftpkg/releases/download/v0.4.1/swiftpkg-0.4.1-universal.tar.gz"
+  sha256 "9c3a066e8f9e44228e342fd3765eebcca2bc8bc47c63889c9aad4f041dbd7127"
   license "GPL-3.0-or-later"
 
   depends_on macos: :ventura
